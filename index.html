@@ -1,1 +1,62 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>ระบบบริหารสต๊อกยูนิฟอร์ม</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+<div class="app-container">
+  <div class="header">
+    <h1><i class="fas fa-tshirt"></i> ระบบบริหารสต๊อกยูนิฟอร์ม</h1>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-number" id="totalItemsStat">0</div><div class="stat-label">รายการสินค้า</div></div>
+      <div class="stat"><div class="stat-number" id="totalStockStat">0</div><div class="stat-label">หน่วยคงเหลือ</div></div>
+      <div class="stat"><div class="stat-number" id="lowStockStat">0</div><div class="stat-label">⚠️ ควรสั่งซื้อ</div></div>
+    </div>
+  </div>
 
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="stock">📦 คลังสินค้า</button>
+    <button class="tab-btn" data-tab="movement">🔄 เบิก/แจกสินค้า</button>
+    <button class="tab-btn" data-tab="receive">🚚 รับสินค้าเข้า</button>
+    <button class="tab-btn" data-tab="return">↩️ คืน/เปลี่ยนสินค้า</button>
+    <button class="tab-btn" data-tab="reports">📊 รายงานรายเดือน</button>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:white; padding:30px 50px; border-radius:40px; text-align:center; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+      <i class="fas fa-cloud-upload-alt fa-3x fa-pulse" style="color:#1e4a6e;"></i>
+      <p style="margin-top:16px; font-weight:500;">กำลังโหลดข้อมูลจากเซิร์ฟเวอร์...</p>
+      <p style="font-size:12px; color:#666; margin-top:8px;">กรุณารอสักครู่</p>
+    </div>
+  </div>
+
+  <div id="stockPane" class="tab-pane active-pane"></div>
+  <div id="movementPane" class="tab-pane"></div>
+  <div id="receivePane" class="tab-pane"></div>
+  <div id="returnPane" class="tab-pane"></div>
+  <div id="reportsPane" class="tab-pane"></div>
+
+  <div class="footer-note">
+    <i class="fas fa-globe"></i> ข้อมูลออนไลน์ อัพเดตเรียลไทม์ | <i class="fas fa-database"></i> ใช้ Google Sheets เป็นฐานข้อมูล
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/data/products.js"></script>
+<script src="js/data/storage.js"></script>
+<script src="js/utils/helpers.js"></script>
+<script src="js/components/stock.js"></script>
+<script src="js/components/movement.js"></script>
+<script src="js/components/receive.js"></script>
+<script src="js/components/return.js"></script>
+<script src="js/components/report.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
