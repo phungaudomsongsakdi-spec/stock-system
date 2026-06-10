@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>ระบบบริหารสต๊อกยูนิฟอร์ม</title>
+  <title>สต๊อกยูนิฟอร์ม</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="styles/main.css">
@@ -11,7 +11,7 @@
 <body>
 <div class="app-container">
   <div class="header">
-    <h1><i class="fas fa-tshirt"></i> ระบบบริหารสต๊อกยูนิฟอร์ม</h1>
+    <h1><i class="fas fa-building"></i> สต๊อกยูนิฟอร์ม</h1>
     <div class="stats-row">
       <div class="stat"><div class="stat-number" id="totalItemsStat">0</div><div class="stat-label">รายการสินค้า</div></div>
       <div class="stat"><div class="stat-number" id="totalStockStat">0</div><div class="stat-label">หน่วยคงเหลือ</div></div>
@@ -21,9 +21,9 @@
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="stock">📦 คลังสินค้า</button>
-    <button class="tab-btn" data-tab="movement">🔄 เบิก/แจกสินค้า</button>
-    <button class="tab-btn" data-tab="receive">🚚 รับสินค้าเข้า</button>
+    <button class="tab-btn" data-tab="movement">🔄 เบิก/แจก/ขาย</button>
     <button class="tab-btn" data-tab="return">↩️ คืน/เปลี่ยนสินค้า</button>
+    <button class="tab-btn" data-tab="receive">🚚 รับสินค้าเข้า</button>
     <button class="tab-btn" data-tab="reports">📊 รายงานรายเดือน</button>
   </div>
 
@@ -38,12 +38,12 @@
 
   <div id="stockPane" class="tab-pane active-pane"></div>
   <div id="movementPane" class="tab-pane"></div>
-  <div id="receivePane" class="tab-pane"></div>
   <div id="returnPane" class="tab-pane"></div>
+  <div id="receivePane" class="tab-pane"></div>
   <div id="reportsPane" class="tab-pane"></div>
 
   <div class="footer-note">
-    <i class="fas fa-globe"></i> ข้อมูลออนไลน์ อัพเดตเรียลไทม์ | <i class="fas fa-database"></i> ใช้ Google Sheets เป็นฐานข้อมูล
+    <i class="fas fa-globe"></i> ข้อมูลออนไลน์ อัพเดตเรียลไทม์
   </div>
 </div>
 
@@ -54,8 +54,8 @@
 <script src="js/utils/helpers.js"></script>
 <script src="js/components/stock.js"></script>
 <script src="js/components/movement.js"></script>
-<script src="js/components/receive.js"></script>
 <script src="js/components/return.js"></script>
+<script src="js/components/receive.js"></script>
 <script src="js/components/report.js"></script>
 <script src="js/app.js"></script>
 </body>
