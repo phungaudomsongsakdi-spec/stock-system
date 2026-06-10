@@ -1,24 +1,23 @@
 const API = {
   async request(action, data = null) {
     try {
-      let url = `${CONFIG.API_URL}?action=${action}&t=${Date.now()}`;
+      let url = `${CONFIG.API_URL}?action=${action}&_t=${Date.now()}`;
       let options = { method: "GET", mode: "cors" };
       
       if (data) {
-        url = `${CONFIG.API_URL}?action=${action}&t=${Date.now()}`;
         options = {
           method: "POST",
           mode: "cors",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `data=${JSON.stringify(data)}`
+          body: new URLSearchParams({ data: JSON.stringify(data) })
         };
       }
       
       const response = await fetch(url, options);
       const result = await response.json();
       
-      if (!result.success) {
-        console.error(`API Error (${action}):`, result.error);
+      if (!result || result.success === false) {
+        console.error(`API Error (${action}):`, result?.error);
         return null;
       }
       
@@ -62,8 +61,8 @@ const API = {
   },
   
   async updateStock(itemcode, change) {
-    const url = `${CONFIG.API_URL}?action=updateStock&itemcode=${encodeURIComponent(itemcode)}&change=${change}&t=${Date.now()}`;
     try {
+      const url = `${CONFIG.API_URL}?action=updateStock&itemcode=${encodeURIComponent(itemcode)}&change=${change}&_t=${Date.now()}`;
       const response = await fetch(url);
       return await response.json();
     } catch (error) {
@@ -76,21 +75,15 @@ const API = {
     return await this.request("updateProduct", product);
   },
   
-  async syncAll() {
-    const result = await this.request("syncAll");
-    return result;
-  },
-  
   showToast(message, isError = false) {
-    const existingToast = document.querySelector(".loading-toast");
-    if (existingToast) existingToast.remove();
+    const existing = document.querySelector(".custom-toast");
+    if (existing) existing.remove();
     
     const toast = document.createElement("div");
-    toast.className = "loading-toast";
-    toast.style.backgroundColor = isError ? "#dc2626" : "#10b981";
+    toast.className = "custom-toast";
+    toast.style.cssText = `position:fixed; bottom:20px; right:20px; background:${isError ? '#dc2626' : '#10b981'}; color:white; padding:12px 24px; border-radius:40px; font-size:0.85rem; z-index:10000; box-shadow:0 4px 12px rgba(0,0,0,0.2);`;
     toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${message}`;
     document.body.appendChild(toast);
-    
     setTimeout(() => toast.remove(), 3000);
   }
 };
