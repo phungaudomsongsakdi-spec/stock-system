@@ -4,7 +4,6 @@ let AppStorage = {
   receives: [],
   returns: [],
   isLoading: false,
-  autoRefreshTimer: null,
   
   async loadData() {
     if (this.isLoading) return;
@@ -23,10 +22,9 @@ let AppStorage = {
       if (receives) this.receives = receives;
       if (returns) this.returns = returns;
       
-      console.log(`✅ โหลดข้อมูลสำเร็จ: สินค้า ${this.products.length} รายการ, เบิก ${this.movements.length}, รับเข้า ${this.receives.length}, คืน ${this.returns.length}`);
+      console.log(`✅ โหลดข้อมูล: สินค้า ${this.products.length}, เบิก ${this.movements.length}, รับ ${this.receives.length}, คืน ${this.returns.length}`);
       
       this.saveLocalBackup();
-      
     } catch (error) {
       console.error("❌ โหลดข้อมูลล้มเหลว:", error);
       this.loadFromLocalBackup();
@@ -40,7 +38,7 @@ let AppStorage = {
       const backup = localStorage.getItem("stock_backup");
       if (backup) {
         const data = JSON.parse(backup);
-        if (data.products && data.products.length > 0) this.products = data.products;
+        if (data.products?.length) this.products = data.products;
         if (data.movements) this.movements = data.movements;
         if (data.receives) this.receives = data.receives;
         if (data.returns) this.returns = data.returns;
@@ -82,27 +80,7 @@ let AppStorage = {
     this.saveLocalBackup();
   },
   
-  async refreshData() {
-    await this.loadData();
-    if (window.StockComponent) StockComponent.renderStockTable();
-    if (window.MovementComponent) MovementComponent.renderMovementsHistory();
-    if (window.ReceiveComponent) ReceiveComponent.renderReceiveHistory();
-    if (window.ReturnComponent) ReturnComponent.renderReturnHistory();
-    Helpers.updateStats();
-    API.showToast("อัพเดตข้อมูลล่าสุดแล้ว", false);
-  },
-  
-  startAutoRefresh() {
-    if (this.autoRefreshTimer) clearInterval(this.autoRefreshTimer);
-    this.autoRefreshTimer = setInterval(() => {
-      this.refreshData();
-    }, CONFIG.AUTO_REFRESH_INTERVAL);
-  },
-  
-  stopAutoRefresh() {
-    if (this.autoRefreshTimer) {
-      clearInterval(this.autoRefreshTimer);
-      this.autoRefreshTimer = null;
-    }
+  saveData() {
+    this.saveLocalBackup();
   }
 };
