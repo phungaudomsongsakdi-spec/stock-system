@@ -1,62 +1,898 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>สต๊อกยูนิฟอร์ม</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="styles/main.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>ระบบบริหารสต็อกเครื่องแบบพนักงาน</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        * { font-family: 'Kanit', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #2b598b;
+            --primary-light: #3780d4;
+            --primary-dark: #1a2f5c;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gray-bg: #f0f4f9;
+            --white: #ffffff;
+        }
+        
+        body { background: linear-gradient(135deg, #f0f4f9 0%, #ffffff 100%); min-height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar {
+            position: fixed; top: 0; left: 0; bottom: 0; width: 280px;
+            background: linear-gradient(180deg, #e7f4ff 0%, #d4eafa 100%);
+            z-index: 2000; transform: translateX(-100%);
+            transition: transform 0.3s ease; box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column;
+        }
+        .sidebar.open { transform: translateX(0); }
+        
+        .drawer-backdrop {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 1999;
+            opacity: 0; visibility: hidden; transition: 0.25s ease;
+        }
+        .drawer-backdrop.open { opacity: 1; visibility: visible; }
+        
+        .sidebar-header { padding: 25px 20px; border-bottom: 2px solid var(--primary-light); }
+        .logo-drawer { display: flex; align-items: center; gap: 12px; }
+        .logo-icon {
+            background: rgba(55,128,212,0.15); width: 50px; height: 50px;
+            border-radius: 25px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; color: var(--primary-light);
+        }
+        .close-drawer {
+            background: rgba(55,128,212,0.15); border: none; width: 36px; height: 36px;
+            border-radius: 50%; cursor: pointer; color: var(--primary-dark);
+        }
+        .menu-list { flex: 1; padding: 20px 12px; }
+        .menu-item {
+            display: flex; align-items: center; gap: 14px; padding: 12px 18px;
+            border-radius: 40px; font-weight: 600; color: var(--primary-dark);
+            cursor: pointer; margin-bottom: 6px; transition: all 0.2s;
+        }
+        .menu-item:hover { background: rgba(55,128,212,0.2); transform: translateX(5px); }
+        .menu-item.active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; }
+        
+        /* Top Bar */
+        .top-bar {
+            background: white; border-radius: 24px; padding: 15px 20px; margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;
+        }
+        .menu-btn {
+            background: white; border: none; width: 45px; height: 45px;
+            border-radius: 50%; font-size: 1.3rem; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); color: var(--primary);
+        }
+        .stock-title { text-align: center; flex: 1; }
+        .stock-title .line1 { font-size: 1.6rem; font-weight: 800; color: var(--primary-dark); }
+        .stock-title .line1 i { color: var(--primary-light); margin-right: 8px; }
+        .stock-title .line2 { font-size: 0.9rem; color: var(--primary-dark); opacity: 0.7; }
+        
+        /* Stats Cards */
+        .stats-container { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 25px; }
+        .stat-card {
+            background: white; border-radius: 20px; padding: 15px 20px; text-align: center;
+            flex: 1; min-width: 100px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-bottom: 3px solid var(--primary-light);
+        }
+        .stat-card .stat-icon { font-size: 1.8rem; color: var(--primary-light); margin-bottom: 8px; }
+        .stat-card .stat-number { font-size: 1.6rem; font-weight: 800; color: var(--primary-dark); }
+        .stat-card .stat-label { font-size: 0.7rem; color: #6c86a3; }
+        .stat-number-green { color: var(--success) !important; }
+        .stat-number-red { color: var(--danger) !important; }
+        
+        /* Cards */
+        .card-custom { background: white; border-radius: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; overflow: hidden; }
+        .card-header-custom { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); padding: 15px 20px; }
+        .card-header-custom h3 { margin: 0; font-size: 1.2rem; font-weight: 600; color: white; }
+        .card-header-custom i { margin-right: 8px; }
+        .card-body-custom { padding: 20px; }
+        
+        /* Form */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { font-size: 0.7rem; font-weight: 600; color: var(--primary-dark); margin-bottom: 5px; display: block; }
+        .form-control-custom {
+            width: 100%; padding: 10px 15px; border-radius: 30px;
+            border: 1px solid #cbd5e1; font-size: 0.85rem;
+        }
+        .form-control-custom:focus { outline: none; border-color: var(--primary-light); box-shadow: 0 0 0 2px rgba(55,128,212,0.2); }
+        
+        .btn-primary-custom {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border: none; padding: 12px 20px; border-radius: 30px; font-weight: 600;
+            color: white; width: 100%; cursor: pointer; font-size: 0.9rem;
+        }
+        .btn-primary-custom:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-success-custom { background: var(--success); border: none; padding: 8px 16px; border-radius: 30px; color: white; cursor: pointer; font-size: 0.75rem; }
+        
+        /* Table */
+        .table-wrapper { overflow-x: auto; border-radius: 16px; }
+        .table-custom { width: 100%; border-collapse: collapse; font-size: 0.75rem; min-width: 650px; }
+        .table-custom th { background: #e8f4fd; color: var(--primary-dark); padding: 12px 8px; font-weight: 700; white-space: nowrap; }
+        .table-custom td { padding: 10px 8px; border-bottom: 1px solid #eef2fa; }
+        
+        /* Badges */
+        .badge-low { background: #fef3c7; color: #b45309; padding: 3px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
+        .badge-normal { background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
+        
+        .reorder-val { cursor: pointer; background: #eef2fa; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+        .edit-stock { cursor: pointer; font-size: 1rem; color: var(--primary); padding: 5px; }
+        
+        .search-box { background: #f0f4fa; border-radius: 30px; padding: 6px 15px; display: flex; align-items: center; gap: 8px; }
+        .search-box input { border: none; background: transparent; outline: none; width: 150px; }
+        
+        .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; }
+        .filter-bar input, .filter-bar select { padding: 6px 12px; border-radius: 30px; border: 1px solid #cbd5e1; font-size: 0.7rem; }
+        
+        .dropdown-list {
+            position: absolute; top: 100%; left: 0; right: 0; background: white;
+            border-radius: 16px; max-height: 200px; overflow-y: auto;
+            z-index: 300; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0; display: none;
+        }
+        .dropdown-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f4fa; display: flex; justify-content: space-between; }
+        .dropdown-item:hover { background: #e8f4fd; }
+        .position-relative { position: relative; }
+        
+        .selected-display { margin-top: 10px; font-size: 0.75rem; background: #eef2ff; padding: 6px 12px; border-radius: 20px; display: none; }
+        
+        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center; }
+        .loading-spinner { background: white; padding: 20px; border-radius: 20px; text-align: center; }
+        
+        .footer { text-align: center; padding: 15px; font-size: 0.7rem; color: #8b7355; }
+        
+        /* Form row for better alignment */
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-row .form-group {
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        @media (max-width: 768px) {
+            .stat-card .stat-number { font-size: 1.2rem; }
+            .stat-card { padding: 10px 15px; }
+            .card-body-custom { padding: 15px; }
+            .form-row { flex-direction: column; gap: 12px; }
+            .form-row .form-group { width: 100%; }
+        }
+    </style>
 </head>
 <body>
-<div class="app-container">
-  <div class="header">
-    <h1><i class="fas fa-building"></i> สต๊อกยูนิฟอร์ม</h1>
-    <div class="stats-row">
-      <div class="stat"><div class="stat-number" id="totalItemsStat">0</div><div class="stat-label">รายการสินค้า</div></div>
-      <div class="stat"><div class="stat-number" id="totalStockStat">0</div><div class="stat-label">หน่วยคงเหลือ</div></div>
-      <div class="stat"><div class="stat-number" id="lowStockStat">0</div><div class="stat-label">⚠️ ควรสั่งซื้อ</div></div>
-    </div>
-  </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="stock">📦 คลังสินค้า</button>
-    <button class="tab-btn" data-tab="movement">🔄 เบิก/แจก/ขาย</button>
-    <button class="tab-btn" data-tab="return">↩️ คืน/เปลี่ยนสินค้า</button>
-    <button class="tab-btn" data-tab="receive">🚚 รับสินค้าเข้า</button>
-    <button class="tab-btn" data-tab="reports">📊 รายงานรายเดือน</button>
-  </div>
-
-  <!-- Loading Overlay -->
-  <div id="loadingOverlay" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
-    <div style="background:white; padding:30px 50px; border-radius:40px; text-align:center; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
-      <i class="fas fa-cloud-upload-alt fa-3x fa-pulse" style="color:#1e4a6e;"></i>
-      <p style="margin-top:16px; font-weight:500;">กำลังโหลดข้อมูลจากเซิร์ฟเวอร์...</p>
-      <p style="font-size:12px; color:#666; margin-top:8px;">กรุณารอสักครู่</p>
-    </div>
-  </div>
-
-  <div id="stockPane" class="tab-pane active-pane"></div>
-  <div id="movementPane" class="tab-pane"></div>
-  <div id="returnPane" class="tab-pane"></div>
-  <div id="receivePane" class="tab-pane"></div>
-  <div id="reportsPane" class="tab-pane"></div>
-
-  <div class="footer-note">
-    <i class="fas fa-globe"></i> ข้อมูลออนไลน์ อัพเดตเรียลไทม์
-  </div>
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"><i class="fas fa-spinner fa-spin fa-2x"></i><p>กำลังโหลด...</p></div>
 </div>
 
-<script src="js/config.js"></script>
-<script src="js/api.js"></script>
-<script src="js/data/products.js"></script>
-<script src="js/data/storage.js"></script>
-<script src="js/utils/helpers.js"></script>
-<script src="js/components/stock.js"></script>
-<script src="js/components/movement.js"></script>
-<script src="js/components/return.js"></script>
-<script src="js/components/receive.js"></script>
-<script src="js/components/report.js"></script>
-<script src="js/app.js"></script>
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="logo-drawer">
+                <div class="logo-icon"><i class="fas fa-tshirt"></i></div>
+                <div><h5 class="mb-0" style="color: var(--primary-light);">คลังเครื่องแบบ</h5><small>ระบบบริหารสต็อก</small></div>
+            </div>
+            <button class="close-drawer" id="closeDrawerBtn"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+    <div class="menu-list">
+        <div class="menu-item active" data-page="stock"><i class="fas fa-boxes"></i> คลังสินค้า</div>
+        <div class="menu-item" data-page="movement"><i class="fas fa-hand-holding-heart"></i> เบิก/แจกพนักงาน</div>
+        <div class="menu-item" data-page="return"><i class="fas fa-undo-alt"></i> คืนสินค้า</div>
+        <div class="menu-item" data-page="receive"><i class="fas fa-truck-ramp-box"></i> รับสินค้าเข้า</div>
+    </div>
+    <div class="p-3 text-center border-top"><small><i class="fas fa-database"></i> บันทึกอัตโนมัติ</small></div>
+</div>
+
+<div class="container py-3">
+    <div class="top-bar">
+        <button class="menu-btn" id="menuToggleBtn"><i class="fas fa-bars"></i></button>
+        <div class="stock-title">
+            <div class="line1"><i class="fas fa-tshirt"></i> สต๊อก</div>
+            <div class="line2">ยูนิฟอร์ม</div>
+        </div>
+        <button id="refreshBtn" style="background: var(--primary-light); border: none; border-radius: 30px; padding: 8px 15px; color: white; font-size: 0.75rem;"><i class="fas fa-sync-alt"></i> โหลด</button>
+    </div>
+    
+    <div class="stats-container">
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-tshirt"></i></div><div class="stat-number" id="totalItemsStat">0</div><div class="stat-label">รายการสินค้า</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-number stat-number-green" id="normalStockStat">0</div><div class="stat-label">สถานะปกติ</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-number stat-number-red" id="lowStockStat">0</div><div class="stat-label">ควรสั่งซื้อ</div></div>
+    </div>
+    
+    <div id="pageContainer"></div>
+    <div class="footer"><i class="fas fa-sync-alt"></i> ระบบบริหารสต็อกเครื่องแบบ</div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    
+    const firebaseConfig = {
+        apiKey: "AIzaSyAgtG_2RgpTClw7EWwXiLk1AiBO5pe4k2s",
+        authDomain: "stock-system-acaae.firebaseapp.com",
+        databaseURL: "https://stock-system-acaae-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "stock-system-acaae",
+        storageBucket: "stock-system-acaae.firebasestorage.app",
+        messagingSenderId: "923611474965",
+        appId: "1:923611474965:web:f8fc7d9e016f7b9e5b321c"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    
+    window.db = database;
+    window.firebaseRef = ref;
+    window.firebaseSet = set;
+    window.firebaseGet = get;
+    
+    document.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<script>
+    // Product Data
+    const productBase = [
+        ["60700005","GROUND CLOTHS(เสื้อกราวด์แขนสั้น)","SET",""],
+        ["60700052","Hat (หมวกตาข่าย) (ขาว)","EA",150],
+        ["60700055","Hat (หมวกตาข่าย) (ชมพู)","EA",150],
+        ["60700054","Hat (หมวกตาข่าย) (เหลือง)","EA",150],
+        ["60700053","Hat (หมวกตาข่าย) (แดง)","EA",150],
+        ["60700048","Hat (หมวกมีหู) (ขาว)","EA",150],
+        ["60700051","Hat (หมวกมีหู) (ฟ้า)","EA",150],
+        ["60700050","Hat (หมวกมีหู) (เหลือง)","EA",150],
+        ["60700049","Hat (หมวกมีหู) (แดง)","EA",150],
+        ["60700039","กางเกง (Size : 26)","EA",245],
+        ["60700040","กางเกง (Size : 28)","EA",245],
+        ["60700041","กางเกง (Size : 30)","EA",245],
+        ["60700042","กางเกง (Size : 32)","EA",245],
+        ["60700043","กางเกง (Size : 34)","EA",245],
+        ["60700044","กางเกง (Size : 36)","EA",245],
+        ["60700045","กางเกง (Size : 38)","EA",245],
+        ["60700046","กางเกง (Size : 40)","EA",245],
+        ["60700056","รองเท้า (Size 36)","PR",115],
+        ["60700057","รองเท้า (37)","PR",115],
+        ["60700058","รองเท้า (38)","PR",115],
+        ["60700059","รองเท้า (39)","PR",115],
+        ["60700060","รองเท้า (40)","PR",115],
+        ["60700061","รองเท้า (41)","PR",115],
+        ["60700016","เสื้อShop L","EA",195],
+        ["60700015","เสื้อShop M","EA",195],
+        ["60700014","เสื้อShop S","EA",195],
+        ["60700017","เสื้อShop XL","EA",195],
+        ["60700018","เสื้อShop XXL","EA",195]
+    ];
+    
+    const departments = ["PA", "SCM", "DC", "AC", "PC", "GA", "HR", "TM", "PS", "RC", "OVEN", "QC", "SS", "RK", "ND"];
+    
+    // App Store
+    let AppStore = {
+        products: [], movements: [], returns: [], receives: [],
+        
+        async load() {
+            this.showLoading(true);
+            try {
+                const db = window.db;
+                const getData = window.firebaseGet;
+                const ref = window.firebaseRef;
+                
+                if (db && ref && getData) {
+                    const snapshot = await getData(ref(db, 'stock-data'));
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        this.products = data.products || [];
+                        this.movements = data.movements || [];
+                        this.returns = data.returns || [];
+                        this.receives = data.receives || [];
+                        console.log("Loaded from Firebase");
+                    }
+                }
+                
+                if (this.products.length === 0) {
+                    let local = localStorage.getItem("uniform_products");
+                    if (local) this.products = JSON.parse(local);
+                }
+                
+                if (this.products.length === 0) this.initProducts();
+                
+                let m = localStorage.getItem("uniform_movements");
+                if (m) this.movements = JSON.parse(m);
+                let r = localStorage.getItem("uniform_returns");
+                if (r) this.returns = JSON.parse(r);
+                let rc = localStorage.getItem("uniform_receives");
+                if (rc) this.receives = JSON.parse(rc);
+                
+            } catch(e) { console.error(e); }
+            this.showLoading(false);
+            this.updateStats();
+        },
+        
+        initProducts() {
+            this.products = productBase.map(item => ({
+                itemcode: item[0], description: item[1], unit: item[2],
+                price: item[3] && !isNaN(parseFloat(item[3])) ? parseFloat(item[3]) : 0,
+                quantity: Math.floor(Math.random() * 40) + 15, reorderPoint: 10
+            }));
+            this.save();
+        },
+        
+        async save() {
+            localStorage.setItem("uniform_products", JSON.stringify(this.products));
+            localStorage.setItem("uniform_movements", JSON.stringify(this.movements));
+            localStorage.setItem("uniform_returns", JSON.stringify(this.returns));
+            localStorage.setItem("uniform_receives", JSON.stringify(this.receives));
+            
+            try {
+                const db = window.db;
+                const setData = window.firebaseSet;
+                const ref = window.firebaseRef;
+                if (db && setData && ref) {
+                    await setData(ref(db, 'stock-data'), {
+                        products: this.products, movements: this.movements,
+                        returns: this.returns, receives: this.receives,
+                        lastUpdated: new Date().toISOString()
+                    });
+                    console.log("Saved to Firebase");
+                }
+            } catch(e) { console.error(e); }
+        },
+        
+        showLoading(show) { document.getElementById("loadingOverlay").style.display = show ? "flex" : "none"; },
+        updateStats() {
+            let normal = this.products.filter(p => p.quantity > (p.reorderPoint || 10)).length;
+            let low = this.products.filter(p => p.quantity <= (p.reorderPoint || 10)).length;
+            document.getElementById("totalItemsStat").innerText = this.products.length;
+            document.getElementById("normalStockStat").innerText = normal;
+            document.getElementById("lowStockStat").innerText = low;
+        }
+    };
+    
+    // Helpers
+    const Helpers = {
+        formatDateThai(d) { if(!d) return "-"; let p = d.split('-'); if(p.length===3) return `${p[2]}/${p[1]}/${parseInt(p[0])+543}`; return d; },
+        today() { return new Date().toISOString().slice(0,10); },
+        timestamp() { let n = new Date(); return `${n.getDate().toString().padStart(2,'0')}/${(n.getMonth()+1).toString().padStart(2,'0')}/${n.getFullYear()+543} ${n.getHours().toString().padStart(2,'0')}:${n.getMinutes().toString().padStart(2,'0')}`; }
+    };
+    
+    // Stock Page
+    const StockPage = {
+        render() { return `
+            <div class="card-custom">
+                <div class="card-header-custom"><h3><i class="fas fa-boxes"></i> คลังสินค้า</h3></div>
+                <div class="card-body-custom">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div class="search-box"><i class="fas fa-search"></i><input type="text" id="stockSearch" placeholder="พิมพ์ค้นหา..."></div>
+                        <small><i class="fas fa-edit"></i> คลิกดินสอแก้ไข</small>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="table-custom">
+                            <thead><tr><th>#</th><th>Itemcode</th><th>สินค้า</th><th>หน่วย</th><th>ราคา</th><th>คงเหลือ</th><th>สถานะ</th><th>รีไทม์</th><th></th></tr></thead>
+                            <tbody id="stockTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `; },
+        mount() { this.renderTable(); document.getElementById("stockSearch")?.addEventListener("input", e => this.renderTable(e.target.value)); },
+        renderTable(filter = "") {
+            let data = AppStore.products.filter(p => p.itemcode.includes(filter) || p.description.toLowerCase().includes(filter.toLowerCase()));
+            let tbody = document.getElementById("stockTbody");
+            if(!tbody) return;
+            if(data.length === 0) { tbody.innerHTML = "<tr><td colspan='9' class='text-center py-4'>ไม่พบสินค้า</td</tr>"; return; }
+            let html = "";
+            data.forEach((p, i) => {
+                let need = p.quantity <= (p.reorderPoint || 10);
+                html += `<tr>
+                    <td class="text-center">${i+1}</td>
+                    <td style="font-family:monospace">${p.itemcode}</td>
+                    <td>${p.description.substring(0,40)}</td>
+                    <td class="text-center">${p.unit}</td>
+                    <td class="text-end">${p.price.toFixed(2)}</td>
+                    <td class="text-center ${need ? 'text-danger fw-bold' : ''}">${p.quantity}</td>
+                    <td class="text-center">${need ? '<span class="badge-low">⚠️ ควรสั่งซื้อ</span>' : '<span class="badge-normal">✅ ปกติ</span>'}</td>
+                    <td class="text-center"><span class="reorder-val" data-code="${p.itemcode}">🔔 ${p.reorderPoint || 10}</span></td>
+                    <td class="text-center"><i class="fas fa-edit edit-stock" data-code="${p.itemcode}"></i></td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+            document.querySelectorAll(".edit-stock").forEach(btn => btn.addEventListener("click", async () => {
+                let code = btn.dataset.code, prod = AppStore.products.find(p => p.itemcode === code);
+                let newQty = prompt("ปรับจำนวนสต็อก:", prod.quantity);
+                if(newQty && !isNaN(parseInt(newQty))) { prod.quantity = parseInt(newQty); await AppStore.save(); this.renderTable(document.getElementById("stockSearch")?.value); AppStore.updateStats(); }
+            }));
+            document.querySelectorAll(".reorder-val").forEach(el => el.addEventListener("click", async () => {
+                let code = el.dataset.code, prod = AppStore.products.find(p => p.itemcode === code);
+                let newVal = prompt("ตั้งค่ารีไทม์ (จำนวนขั้นต่ำ):", prod.reorderPoint);
+                if(newVal && !isNaN(parseInt(newVal))) { prod.reorderPoint = parseInt(newVal); await AppStore.save(); this.renderTable(document.getElementById("stockSearch")?.value); AppStore.updateStats(); }
+            }));
+        }
+    };
+    
+    // Movement Page
+    let movementSelectedProduct = null, movementSelectedDept = "";
+    const MovementPage = {
+        render() { return `
+            <div class="card-custom">
+                <div class="card-header-custom"><h3><i class="fas fa-hand-holding-heart"></i> เบิก/แจกพนักงาน</h3></div>
+                <div class="card-body-custom">
+                    <div style="background:#f8fafc; border-radius: 20px; padding: 20px; margin-bottom: 20px;">
+                        <div class="form-row">
+                            <div class="form-group" style="flex:2; position:relative;">
+                                <label>🔍 เลือกสินค้า (พิมพ์ค้นหา)</label>
+                                <input type="text" id="movementProductInput" class="form-control-custom" placeholder="พิมพ์ค้นหา..." autocomplete="off">
+                                <div id="movementDropdownList" class="dropdown-list"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>จำนวน</label>
+                                <input type="number" id="movementQty" class="form-control-custom" min="1" value="1">
+                            </div>
+                            <div class="form-group">
+                                <label>ประเภท</label>
+                                <select id="movementType" class="form-control-custom">
+                                    <option value="anniversary">🎉 ชุดครบปี</option>
+                                    <option value="probation">📋 ชุดผ่านทดลองงาน</option>
+                                    <option value="general">👥 เบิกจ่ายพนักงานทั่วไป</option>
+                                    <option value="newhire">🆕 พนักงานใหม่</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>วันที่</label>
+                                <input type="date" id="movementDate" class="form-control-custom">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>ผู้จ่าย</label>
+                                <input type="text" id="movementIssuer" class="form-control-custom" placeholder="ผู้จ่าย">
+                            </div>
+                            <div class="form-group" style="position:relative;">
+                                <label>🔍 แผนก (พิมพ์ค้นหา)</label>
+                                <input type="text" id="movementDeptInput" class="form-control-custom" placeholder="พิมพ์ค้นหา...">
+                                <div id="movementDeptDropdownList" class="dropdown-list"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>ส่วนงานที่เบิก</label>
+                                <input type="text" id="movementNote" class="form-control-custom" placeholder="ส่วนงาน">
+                            </div>
+                            <div class="form-group" style="flex:0.5;">
+                                <label>&nbsp;</label>
+                                <button id="recordMovementBtn" class="btn-primary-custom"><i class="fas fa-save"></i> บันทึก</button>
+                            </div>
+                        </div>
+                        <div id="selectedProductDisplay" class="selected-display">✅ เลือก: <span id="selectedProductName"></span></div>
+                        <div id="selectedDeptDisplay" class="selected-display">🏢 แผนก: <span id="selectedDeptName"></span></div>
+                    </div>
+                    
+                    <div class="filter-bar">
+                        <i class="fas fa-filter"></i> <span>กรองประวัติ:</span>
+                        <input type="text" id="historySearch" placeholder="ค้นหา...">
+                        <select id="historyTypeFilter"><option value="">ทุกประเภท</option><option value="anniversary">🎉 ชุดครบปี</option><option value="probation">📋 ชุดผ่านทดลองงาน</option><option value="general">👥 เบิกจ่ายทั่วไป</option><option value="newhire">🆕 พนักงานใหม่</option></select>
+                        <input type="text" id="historyDeptInput" placeholder="แผนก...">
+                        <input type="date" id="historyDateFrom" placeholder="จาก">
+                        <input type="date" id="historyDateTo" placeholder="ถึง">
+                        <button id="resetHistoryBtn" class="btn-success-custom">รีเซ็ต</button>
+                    </div>
+                    
+                    <div class="table-wrapper">
+                        <table class="table-custom">
+                            <thead><tr><th>วันที่</th><th>ประเภท</th><th>Itemcode</th><th>สินค้า</th><th>จำนวน</th><th>มูลค่า</th><th>ผู้จ่าย</th><th>แผนก</th></tr></thead>
+                            <tbody id="historyTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `; },
+        mount() {
+            document.getElementById("movementDate").value = Helpers.today();
+            this.renderHistory();
+            this.initEvents();
+        },
+        initEvents() {
+            let inp = document.getElementById("movementProductInput");
+            inp?.addEventListener("input", e => this.updateProductDropdown(e.target.value));
+            let dept = document.getElementById("movementDeptInput");
+            dept?.addEventListener("input", e => this.updateDeptDropdown(e.target.value));
+            document.getElementById("recordMovementBtn")?.addEventListener("click", () => this.record());
+            document.getElementById("historySearch")?.addEventListener("input", () => this.renderHistory());
+            document.getElementById("historyTypeFilter")?.addEventListener("change", () => this.renderHistory());
+            document.getElementById("historyDeptInput")?.addEventListener("input", () => this.renderHistory());
+            document.getElementById("historyDateFrom")?.addEventListener("change", () => this.renderHistory());
+            document.getElementById("historyDateTo")?.addEventListener("change", () => this.renderHistory());
+            document.getElementById("resetHistoryBtn")?.addEventListener("click", () => {
+                document.getElementById("historySearch").value = "";
+                document.getElementById("historyTypeFilter").value = "";
+                document.getElementById("historyDeptInput").value = "";
+                document.getElementById("historyDateFrom").value = "";
+                document.getElementById("historyDateTo").value = "";
+                this.renderHistory();
+            });
+            document.addEventListener("click", (e) => {
+                let d1 = document.getElementById("movementDropdownList");
+                if(d1 && inp && !d1.contains(e.target) && e.target !== inp) d1.style.display = "none";
+                let d2 = document.getElementById("movementDeptDropdownList");
+                if(d2 && dept && !d2.contains(e.target) && e.target !== dept) d2.style.display = "none";
+            });
+        },
+        updateProductDropdown(search) {
+            let dd = document.getElementById("movementDropdownList");
+            if(!dd) return;
+            if(search.trim() === "") { dd.style.display = "none"; return; }
+            let filtered = AppStore.products.filter(p => p.itemcode.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase()));
+            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบสินค้า</div>'; dd.style.display = "block"; return; }
+            dd.innerHTML = filtered.slice(0,15).map(p => `<div class="dropdown-item" data-code="${p.itemcode}" data-name="${p.description}" data-price="${p.price}" data-stock="${p.quantity}"><div><strong>${p.itemcode}</strong><br><small>${p.description.substring(0,35)}</small></div><div><strong>${p.quantity}</strong> ชิ้น</div></div>`).join("");
+            dd.style.display = "block";
+            dd.querySelectorAll(".dropdown-item").forEach(item => item.addEventListener("click", () => {
+                movementSelectedProduct = { itemcode: item.dataset.code, description: item.dataset.name, price: parseFloat(item.dataset.price), quantity: parseInt(item.dataset.stock) };
+                document.getElementById("movementProductInput").value = `${item.dataset.code} - ${item.dataset.name.substring(0,40)} (เหลือ ${item.dataset.stock})`;
+                document.getElementById("selectedProductDisplay").style.display = "block";
+                document.getElementById("selectedProductName").innerHTML = `${item.dataset.code} - ${item.dataset.name}`;
+                dd.style.display = "none";
+            }));
+        },
+        updateDeptDropdown(search) {
+            let dd = document.getElementById("movementDeptDropdownList");
+            if(!dd) return;
+            if(search.trim() === "") { dd.style.display = "none"; return; }
+            let filtered = departments.filter(d => d.toLowerCase().includes(search.toLowerCase()));
+            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบแผนก</div>'; dd.style.display = "block"; return; }
+            dd.innerHTML = filtered.map(d => `<div class="dropdown-item" data-dept="${d}">🏢 ${d}</div>`).join("");
+            dd.style.display = "block";
+            dd.querySelectorAll(".dropdown-item").forEach(item => item.addEventListener("click", () => {
+                movementSelectedDept = item.dataset.dept;
+                document.getElementById("movementDeptInput").value = item.dataset.dept;
+                document.getElementById("selectedDeptDisplay").style.display = "block";
+                document.getElementById("selectedDeptName").innerHTML = item.dataset.dept;
+                dd.style.display = "none";
+            }));
+        },
+        async record() {
+            if(!movementSelectedProduct) { alert("กรุณาเลือกสินค้า"); return; }
+            if(!movementSelectedDept) { alert("กรุณาเลือกแผนก"); return; }
+            let qty = parseInt(document.getElementById("movementQty").value);
+            if(isNaN(qty) || qty <= 0) { alert("จำนวนต้องมากกว่า 0"); return; }
+            if(movementSelectedProduct.quantity < qty) { alert(`สต็อกไม่พอ! คงเหลือ ${movementSelectedProduct.quantity}`); return; }
+            
+            let type = document.getElementById("movementType").value;
+            let date = document.getElementById("movementDate").value || Helpers.today();
+            let issuer = document.getElementById("movementIssuer").value.trim() || "-";
+            let note = document.getElementById("movementNote").value.trim() || "-";
+            let total = movementSelectedProduct.price * qty;
+            let typeLabel = { anniversary:"🎉 ชุดครบปี", probation:"📋 ชุดผ่านทดลองงาน", general:"👥 เบิกจ่ายทั่วไป", newhire:"🆕 พนักงานใหม่" }[type];
+            
+            let prod = AppStore.products.find(p => p.itemcode === movementSelectedProduct.itemcode);
+            if(prod) prod.quantity -= qty;
+            
+            AppStore.movements.push({ date, type, typeLabel, itemcode: movementSelectedProduct.itemcode, description: movementSelectedProduct.description, quantity: qty, unitPrice: movementSelectedProduct.price, totalValue: total, issuer, department: movementSelectedDept, note, timestamp: Helpers.timestamp() });
+            await AppStore.save();
+            
+            movementSelectedProduct = null; movementSelectedDept = "";
+            document.getElementById("movementProductInput").value = "";
+            document.getElementById("movementDeptInput").value = "";
+            document.getElementById("movementQty").value = "1";
+            document.getElementById("movementIssuer").value = "";
+            document.getElementById("movementNote").value = "";
+            document.getElementById("selectedProductDisplay").style.display = "none";
+            document.getElementById("selectedDeptDisplay").style.display = "none";
+            
+            this.renderHistory();
+            StockPage.renderTable();
+            AppStore.updateStats();
+            alert("บันทึกสำเร็จ!");
+        },
+        renderHistory() {
+            let txt = document.getElementById("historySearch")?.value || "";
+            let type = document.getElementById("historyTypeFilter")?.value || "";
+            let dept = document.getElementById("historyDeptInput")?.value || "";
+            let fd = document.getElementById("historyDateFrom")?.value || "";
+            let td = document.getElementById("historyDateTo")?.value || "";
+            let filtered = AppStore.movements.filter(m => (!txt || m.itemcode.includes(txt) || m.description.includes(txt)) && (!type || m.type === type) && (!dept || (m.department||"").includes(dept)) && (!fd || m.date >= fd) && (!td || m.date <= td));
+            filtered.sort((a,b)=>b.date.localeCompare(a.date));
+            let tbody = document.getElementById("historyTbody");
+            if(!tbody) return;
+            if(filtered.length === 0) { tbody.innerHTML = "<tr><td colspan='8' class='text-center py-4'>ไม่มีประวัติ</td</tr>"; return; }
+            tbody.innerHTML = filtered.map(m => `<tr><td class="text-center">${Helpers.formatDateThai(m.date)}</td><td class="text-center">${m.typeLabel}</td><td>${m.itemcode}</td><td>${m.description.substring(0,30)}</td><td class="text-center">${m.quantity}</td><td class="text-end">${(m.totalValue||0).toFixed(2)}</td><td>${m.issuer}</td><td>${m.department}</td></tr>`).join("");
+        }
+    };
+    
+    // Return Page
+    let returnSelectedProduct = null, returnSelectedDept = "";
+    const ReturnPage = {
+        render() { return `
+            <div class="card-custom">
+                <div class="card-header-custom"><h3><i class="fas fa-undo-alt"></i> คืนสินค้า</h3></div>
+                <div class="card-body-custom">
+                    <div style="background:#f8fafc; border-radius: 20px; padding: 20px; margin-bottom: 20px;">
+                        <div class="form-row">
+                            <div class="form-group" style="flex:2; position:relative;">
+                                <label>🔍 เลือกสินค้าที่จะคืน (พิมพ์ค้นหา)</label>
+                                <input type="text" id="returnProductInput" class="form-control-custom" placeholder="พิมพ์ค้นหา...">
+                                <div id="returnDropdownList" class="dropdown-list"></div>
+                            </div>
+                            <div class="form-group"><label>จำนวน</label><input type="number" id="returnQty" class="form-control-custom" min="1" value="1"></div>
+                            <div class="form-group"><label>วันที่</label><input type="date" id="returnDate" class="form-control-custom"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>ผู้รับคืน</label><input type="text" id="returnReceiver" class="form-control-custom" placeholder="ผู้รับคืน"></div>
+                            <div class="form-group"><label>ผู้คืน</label><input type="text" id="returnReturner" class="form-control-custom" placeholder="ผู้คืน"></div>
+                            <div class="form-group" style="position:relative;"><label>🔍 แผนก (พิมพ์ค้นหา)</label><input type="text" id="returnDeptInput" class="form-control-custom" placeholder="พิมพ์ค้นหา..."><div id="returnDeptDropdownList" class="dropdown-list"></div></div>
+                            <div class="form-group" style="flex:0.5;"><label>&nbsp;</label><button id="recordReturnBtn" class="btn-primary-custom"><i class="fas fa-save"></i> บันทึก</button></div>
+                        </div>
+                        <div class="form-row"><div class="form-group"><label>หมายเหตุ</label><input type="text" id="returnNote" class="form-control-custom" placeholder="เหตุผล"></div></div>
+                        <div id="selectedReturnProductDisplay" class="selected-display">✅ เลือก: <span id="selectedReturnProductName"></span></div>
+                        <div id="selectedReturnDeptDisplay" class="selected-display">🏢 แผนก: <span id="selectedReturnDeptName"></span></div>
+                    </div>
+                    
+                    <div class="filter-bar">
+                        <i class="fas fa-filter"></i> <span>กรองประวัติ:</span>
+                        <input type="text" id="returnHistorySearch" placeholder="ค้นหา...">
+                        <button id="resetReturnHistoryBtn" class="btn-success-custom">รีเซ็ต</button>
+                    </div>
+                    
+                    <div class="table-wrapper">
+                        <table class="table-custom"><thead><tr><th>วันที่</th><th>Itemcode</th><th>สินค้า</th><th>จำนวน</th><th>ผู้รับคืน</th><th>ผู้คืน</th><th>แผนก</th></tr></thead><tbody id="returnHistoryTbody"></tbody></table>
+                    </div>
+                </div>
+            </div>
+        `; },
+        mount() {
+            document.getElementById("returnDate").value = Helpers.today();
+            this.renderHistory();
+            this.initEvents();
+        },
+        initEvents() {
+            let inp = document.getElementById("returnProductInput");
+            inp?.addEventListener("input", e => this.updateProductDropdown(e.target.value));
+            let dept = document.getElementById("returnDeptInput");
+            dept?.addEventListener("input", e => this.updateDeptDropdown(e.target.value));
+            document.getElementById("recordReturnBtn")?.addEventListener("click", () => this.record());
+            document.getElementById("returnHistorySearch")?.addEventListener("input", () => this.renderHistory());
+            document.getElementById("resetReturnHistoryBtn")?.addEventListener("click", () => { document.getElementById("returnHistorySearch").value = ""; this.renderHistory(); });
+            document.addEventListener("click", (e) => {
+                let d1 = document.getElementById("returnDropdownList");
+                if(d1 && inp && !d1.contains(e.target) && e.target !== inp) d1.style.display = "none";
+                let d2 = document.getElementById("returnDeptDropdownList");
+                if(d2 && dept && !d2.contains(e.target) && e.target !== dept) d2.style.display = "none";
+            });
+        },
+        updateProductDropdown(search) {
+            let dd = document.getElementById("returnDropdownList");
+            if(!dd) return;
+            if(search.trim() === "") { dd.style.display = "none"; return; }
+            let filtered = AppStore.products.filter(p => p.itemcode.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase()));
+            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบสินค้า</div>'; dd.style.display = "block"; return; }
+            dd.innerHTML = filtered.slice(0,15).map(p => `<div class="dropdown-item" data-code="${p.itemcode}" data-name="${p.description}" data-price="${p.price}" data-stock="${p.quantity}"><div><strong>${p.itemcode}</strong><br><small>${p.description.substring(0,35)}</small></div><div><strong>${p.quantity}</strong> ชิ้น</div></div>`).join("");
+            dd.style.display = "block";
+            dd.querySelectorAll(".dropdown-item").forEach(item => item.addEventListener("click", () => {
+                returnSelectedProduct = { itemcode: item.dataset.code, description: item.dataset.name, price: parseFloat(item.dataset.price), quantity: parseInt(item.dataset.stock) };
+                document.getElementById("returnProductInput").value = `${item.dataset.code} - ${item.dataset.name.substring(0,40)}`;
+                document.getElementById("selectedReturnProductDisplay").style.display = "block";
+                document.getElementById("selectedReturnProductName").innerHTML = `${item.dataset.code} - ${item.dataset.name}`;
+                dd.style.display = "none";
+            }));
+        },
+        updateDeptDropdown(search) {
+            let dd = document.getElementById("returnDeptDropdownList");
+            if(!dd) return;
+            if(search.trim() === "") { dd.style.display = "none"; return; }
+            let filtered = departments.filter(d => d.toLowerCase().includes(search.toLowerCase()));
+            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบแผนก</div>'; dd.style.display = "block"; return; }
+            dd.innerHTML = filtered.map(d => `<div class="dropdown-item" data-dept="${d}">🏢 ${d}</div>`).join("");
+            dd.style.display = "block";
+            dd.querySelectorAll(".dropdown-item").forEach(item => item.addEventListener("click", () => {
+                returnSelectedDept = item.dataset.dept;
+                document.getElementById("returnDeptInput").value = item.dataset.dept;
+                document.getElementById("selectedReturnDeptDisplay").style.display = "block";
+                document.getElementById("selectedReturnDeptName").innerHTML = item.dataset.dept;
+                dd.style.display = "none";
+            }));
+        },
+        async record() {
+            if(!returnSelectedProduct) { alert("กรุณาเลือกสินค้า"); return; }
+            if(!returnSelectedDept) { alert("กรุณาเลือกแผนก"); return; }
+            let qty = parseInt(document.getElementById("returnQty").value);
+            if(isNaN(qty) || qty <= 0) { alert("จำนวนต้องมากกว่า 0"); return; }
+            let receiver = document.getElementById("returnReceiver").value.trim();
+            let returner = document.getElementById("returnReturner").value.trim();
+            if(!receiver) { alert("กรุณากรอกผู้รับคืน"); return; }
+            if(!returner) { alert("กรุณากรอกผู้คืน"); return; }
+            let date = document.getElementById("returnDate").value || Helpers.today();
+            let note = document.getElementById("returnNote").value.trim() || "คืนสินค้า";
+            
+            let prod = AppStore.products.find(p => p.itemcode === returnSelectedProduct.itemcode);
+            if(prod) prod.quantity += qty;
+            
+            AppStore.returns.push({ type: "return", date, oldItemcode: returnSelectedProduct.itemcode, oldDescription: returnSelectedProduct.description, oldQty: qty, receiver, returner, department: returnSelectedDept, note, timestamp: Helpers.timestamp() });
+            await AppStore.save();
+            
+            returnSelectedProduct = null; returnSelectedDept = "";
+            document.getElementById("returnProductInput").value = "";
+            document.getElementById("returnDeptInput").value = "";
+            document.getElementById("returnQty").value = "1";
+            document.getElementById("returnReceiver").value = "";
+            document.getElementById("returnReturner").value = "";
+            document.getElementById("returnNote").value = "";
+            document.getElementById("selectedReturnProductDisplay").style.display = "none";
+            document.getElementById("selectedReturnDeptDisplay").style.display = "none";
+            
+            this.renderHistory();
+            StockPage.renderTable();
+            AppStore.updateStats();
+            alert("บันทึกการคืนสินค้าสำเร็จ!");
+        },
+        renderHistory() {
+            let txt = document.getElementById("returnHistorySearch")?.value || "";
+            let filtered = AppStore.returns.filter(r => !txt || r.oldItemcode.includes(txt) || r.oldDescription.includes(txt));
+            filtered.sort((a,b)=>b.date.localeCompare(a.date));
+            let tbody = document.getElementById("returnHistoryTbody");
+            if(!tbody) return;
+            if(filtered.length === 0) { tbody.innerHTML = "<tr><td colspan='7' class='text-center py-4'>ไม่มีประวัติ</td</tr>"; return; }
+            tbody.innerHTML = filtered.map(r => `<tr><td class="text-center">${Helpers.formatDateThai(r.date)}</td><td>${r.oldItemcode}</td><td>${r.oldDescription.substring(0,30)}</td><td class="text-center">${r.oldQty}</td><td>${r.receiver}</td><td>${r.returner}</td><td>${r.department}</td></tr>`).join("");
+        }
+    };
+    
+    // Receive Page
+    let receiveSelectedProduct = null;
+    const ReceivePage = {
+        render() { return `
+            <div class="card-custom">
+                <div class="card-header-custom"><h3><i class="fas fa-truck-ramp-box"></i> รับสินค้าเข้า</h3></div>
+                <div class="card-body-custom">
+                    <div style="background:#e0f2fe; border-radius: 20px; padding: 20px; margin-bottom: 20px;">
+                        <div class="form-row">
+                            <div class="form-group" style="flex:2; position:relative;">
+                                <label>🔍 เลือกสินค้า (พิมพ์ค้นหา)</label>
+                                <input type="text" id="receiveProductInput" class="form-control-custom" placeholder="พิมพ์ค้นหา...">
+                                <div id="receiveDropdownList" class="dropdown-list"></div>
+                            </div>
+                            <div class="form-group"><label>จำนวนที่รับเข้า</label><input type="number" id="receiveQty" class="form-control-custom" min="1" value="1"></div>
+                            <div class="form-group"><label>วันที่รับ</label><input type="date" id="receiveDate" class="form-control-custom"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>ผู้รับสินค้า</label><input type="text" id="receiveReceiver" class="form-control-custom" placeholder="ชื่อผู้รับ"></div>
+                            <div class="form-group"><label>หมายเหตุ</label><input type="text" id="receiveNote" class="form-control-custom" placeholder="หมายเหตุ"></div>
+                            <div class="form-group" style="flex:0.5;"><label>&nbsp;</label><button id="recordReceiveBtn" class="btn-primary-custom"><i class="fas fa-save"></i> บันทึก</button></div>
+                        </div>
+                        <div id="selectedReceiveProductDisplay" class="selected-display">✅ เลือก: <span id="selectedReceiveProductName"></span></div>
+                    </div>
+                    
+                    <div class="filter-bar">
+                        <i class="fas fa-filter"></i> <span>กรองประวัติ:</span>
+                        <input type="text" id="receiveHistorySearch" placeholder="ค้นหา...">
+                        <input type="date" id="receiveHistoryDateFrom" placeholder="จาก">
+                        <input type="date" id="receiveHistoryDateTo" placeholder="ถึง">
+                        <button id="resetReceiveHistoryBtn" class="btn-success-custom">รีเซ็ต</button>
+                    </div>
+                    
+                    <div class="table-wrapper">
+                        <table class="table-custom"><thead><tr><th>วันที่</th><th>Itemcode</th><th>สินค้า</th><th>จำนวน</th><th>มูลค่า</th><th>ผู้รับ</th><th>หมายเหตุ</th></tr></thead><tbody id="receiveHistoryTbody"></tbody></table>
+                    </div>
+                </div>
+            </div>
+        `; },
+        mount() {
+            document.getElementById("receiveDate").value = Helpers.today();
+            this.renderHistory();
+            this.initEvents();
+        },
+        initEvents() {
+            let inp = document.getElementById("receiveProductInput");
+            inp?.addEventListener("input", e => this.updateDropdown(e.target.value));
+            document.getElementById("recordReceiveBtn")?.addEventListener("click", () => this.record());
+            document.getElementById("receiveHistorySearch")?.addEventListener("input", () => this.renderHistory());
+            document.getElementById("receiveHistoryDateFrom")?.addEventListener("change", () => this.renderHistory());
+            document.getElementById("receiveHistoryDateTo")?.addEventListener("change", () => this.renderHistory());
+            document.getElementById("resetReceiveHistoryBtn")?.addEventListener("click", () => {
+                document.getElementById("receiveHistorySearch").value = "";
+                document.getElementById("receiveHistoryDateFrom").value = "";
+                document.getElementById("receiveHistoryDateTo").value = "";
+                this.renderHistory();
+            });
+            document.addEventListener("click", (e) => {
+                let dd = document.getElementById("receiveDropdownList");
+                if(dd && inp && !dd.contains(e.target) && e.target !== inp) dd.style.display = "none";
+            });
+        },
+        updateDropdown(search) {
+            let dd = document.getElementById("receiveDropdownList");
+            if(!dd) return;
+            if(search.trim() === "") { dd.style.display = "none"; return; }
+            let filtered = AppStore.products.filter(p => p.itemcode.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase()));
+            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบสินค้า</div>'; dd.style.display = "block"; return; }
+            dd.innerHTML = filtered.slice(0,15).map(p => `<div class="dropdown-item" data-code="${p.itemcode}" data-name="${p.description}" data-price="${p.price}"><div><strong>${p.itemcode}</strong><br><small>${p.description.substring(0,35)}</small></div></div>`).join("");
+            dd.style.display = "block";
+            dd.querySelectorAll(".dropdown-item").forEach(item => item.addEventListener("click", () => {
+                receiveSelectedProduct = { itemcode: item.dataset.code, description: item.dataset.name, price: parseFloat(item.dataset.price) };
+                document.getElementById("receiveProductInput").value = `${item.dataset.code} - ${item.dataset.name.substring(0,40)}`;
+                document.getElementById("selectedReceiveProductDisplay").style.display = "block";
+                document.getElementById("selectedReceiveProductName").innerHTML = `${item.dataset.code} - ${item.dataset.name}`;
+                dd.style.display = "none";
+            }));
+        },
+        async record() {
+            if(!receiveSelectedProduct) { alert("กรุณาเลือกสินค้า"); return; }
+            let qty = parseInt(document.getElementById("receiveQty").value);
+            if(isNaN(qty) || qty <= 0) { alert("จำนวนต้องมากกว่า 0"); return; }
+            let receiver = document.getElementById("receiveReceiver").value.trim();
+            if(!receiver) { alert("กรุณากรอกชื่อผู้รับสินค้า"); return; }
+            let date = document.getElementById("receiveDate").value || Helpers.today();
+            let note = document.getElementById("receiveNote").value.trim() || "รับสินค้าเข้า";
+            let total = receiveSelectedProduct.price * qty;
+            
+            let prod = AppStore.products.find(p => p.itemcode === receiveSelectedProduct.itemcode);
+            if(prod) prod.quantity += qty;
+            
+            AppStore.receives.push({ date, itemcode: receiveSelectedProduct.itemcode, description: receiveSelectedProduct.description, quantity: qty, unitPrice: receiveSelectedProduct.price, totalValue: total, receiver, note, timestamp: Helpers.timestamp() });
+            await AppStore.save();
+            
+            receiveSelectedProduct = null;
+            document.getElementById("receiveProductInput").value = "";
+            document.getElementById("receiveQty").value = "1";
+            document.getElementById("receiveReceiver").value = "";
+            document.getElementById("receiveNote").value = "";
+            document.getElementById("selectedReceiveProductDisplay").style.display = "none";
+            
+            this.renderHistory();
+            StockPage.renderTable();
+            AppStore.updateStats();
+            alert("รับสินค้าเข้าสำเร็จ!");
+        },
+        renderHistory() {
+            let txt = document.getElementById("receiveHistorySearch")?.value || "";
+            let fd = document.getElementById("receiveHistoryDateFrom")?.value || "";
+            let td = document.getElementById("receiveHistoryDateTo")?.value || "";
+            let filtered = AppStore.receives.filter(r => (!txt || r.itemcode.includes(txt) || r.description.includes(txt)) && (!fd || r.date >= fd) && (!td || r.date <= td));
+            filtered.sort((a,b)=>b.date.localeCompare(a.date));
+            let tbody = document.getElementById("receiveHistoryTbody");
+            if(!tbody) return;
+            if(filtered.length === 0) { tbody.innerHTML = "<tr><td colspan='7' class='text-center py-4'>ไม่มีประวัติ</td<tr>"; return; }
+            tbody.innerHTML = filtered.map(r => `<tr><td class="text-center">${Helpers.formatDateThai(r.date)}</td><td>${r.itemcode}</td><td>${r.description.substring(0,30)}</td><td class="text-center">${r.quantity}</td><td class="text-end">${(r.totalValue||0).toFixed(2)}</td><td>${r.receiver}</td><td>${r.note}</td></tr>`).join("");
+        }
+    };
+    
+    // Navigation
+    let currentPage = "stock";
+    function loadPage(page) {
+        currentPage = page;
+        document.querySelectorAll(".menu-item").forEach(m => m.classList.remove("active"));
+        document.querySelector(`.menu-item[data-page="${page}"]`).classList.add("active");
+        if(page === "stock") { document.getElementById("pageContainer").innerHTML = StockPage.render(); StockPage.mount(); }
+        else if(page === "movement") { document.getElementById("pageContainer").innerHTML = MovementPage.render(); MovementPage.mount(); }
+        else if(page === "return") { document.getElementById("pageContainer").innerHTML = ReturnPage.render(); ReturnPage.mount(); }
+        else if(page === "receive") { document.getElementById("pageContainer").innerHTML = ReceivePage.render(); ReceivePage.mount(); }
+    }
+    
+    // Drawer
+    function openDrawer() { document.getElementById("sidebar").classList.add("open"); document.getElementById("drawerBackdrop").classList.add("open"); }
+    function closeDrawer() { document.getElementById("sidebar").classList.remove("open"); document.getElementById("drawerBackdrop").classList.remove("open"); }
+    
+    document.getElementById("menuToggleBtn")?.addEventListener("click", openDrawer);
+    document.getElementById("closeDrawerBtn")?.addEventListener("click", closeDrawer);
+    document.getElementById("drawerBackdrop")?.addEventListener("click", closeDrawer);
+    document.querySelectorAll(".menu-item").forEach(btn => btn.addEventListener("click", () => { loadPage(btn.dataset.page); closeDrawer(); }));
+    document.getElementById("refreshBtn")?.addEventListener("click", async () => { await AppStore.load(); loadPage(currentPage); alert("โหลดข้อมูลล่าสุดสำเร็จ!"); });
+    
+    // Start
+    document.addEventListener('firebase-ready', async () => {
+        await AppStore.load();
+        loadPage("stock");
+    });
+    if (window.db) document.dispatchEvent(new Event('firebase-ready'));
+    else setTimeout(() => document.dispatchEvent(new Event('firebase-ready')), 500);
+</script>
 </body>
 </html>
