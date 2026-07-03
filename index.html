@@ -109,11 +109,11 @@
         
         .btn-primary-custom {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            border: none; padding: 12px 20px; border-radius: 30px; font-weight: 600;
-            color: white; width: 100%; cursor: pointer; font-size: 0.9rem;
+            border: none; padding: 10px 20px; border-radius: 30px; font-weight: 600;
+            color: white; width: 100%; cursor: pointer;
         }
         .btn-primary-custom:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .btn-success-custom { background: var(--success); border: none; padding: 8px 16px; border-radius: 30px; color: white; cursor: pointer; font-size: 0.75rem; }
+        .btn-success-custom { background: var(--success); border: none; padding: 8px 16px; border-radius: 30px; color: white; cursor: pointer; }
         
         /* Table */
         .table-wrapper { overflow-x: auto; border-radius: 16px; }
@@ -151,24 +151,10 @@
         
         .footer { text-align: center; padding: 15px; font-size: 0.7rem; color: #8b7355; }
         
-        /* Form row for better alignment */
-        .form-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .form-row .form-group {
-            flex: 1;
-            min-width: 120px;
-        }
-        
         @media (max-width: 768px) {
             .stat-card .stat-number { font-size: 1.2rem; }
             .stat-card { padding: 10px 15px; }
             .card-body-custom { padding: 15px; }
-            .form-row { flex-direction: column; gap: 12px; }
-            .form-row .form-group { width: 100%; }
         }
     </style>
 </head>
@@ -242,6 +228,7 @@
     window.firebaseSet = set;
     window.firebaseGet = get;
     
+    // Start app after Firebase ready
     document.dispatchEvent(new Event('firebase-ready'));
 </script>
 
@@ -326,7 +313,8 @@
             this.products = productBase.map(item => ({
                 itemcode: item[0], description: item[1], unit: item[2],
                 price: item[3] && !isNaN(parseFloat(item[3])) ? parseFloat(item[3]) : 0,
-                quantity: Math.floor(Math.random() * 40) + 15, reorderPoint: 10
+                quantity: Math.floor(Math.random() * 40) + 15, 
+                reorderPoint: 0  // ✅ ตั้งค่าเริ่มต้นเป็น 0
             }));
             this.save();
         },
@@ -353,9 +341,14 @@
         },
         
         showLoading(show) { document.getElementById("loadingOverlay").style.display = show ? "flex" : "none"; },
+        
         updateStats() {
-            let normal = this.products.filter(p => p.quantity > (p.reorderPoint || 10)).length;
-            let low = this.products.filter(p => p.quantity <= (p.reorderPoint || 10)).length;
+            // ✅ แก้ไข: นับเฉพาะ reorderPoint > 0 และ quantity <= reorderPoint
+            let low = this.products.filter(p => {
+                let reorderPoint = (p.reorderPoint !== undefined && p.reorderPoint !== null) ? p.reorderPoint : 0;
+                return reorderPoint > 0 && p.quantity <= reorderPoint;
+            }).length;
+            let normal = this.products.length - low;
             document.getElementById("totalItemsStat").innerText = this.products.length;
             document.getElementById("normalStockStat").innerText = normal;
             document.getElementById("lowStockStat").innerText = low;
@@ -376,7 +369,7 @@
                 <div class="card-header-custom"><h3><i class="fas fa-boxes"></i> คลังสินค้า</h3></div>
                 <div class="card-body-custom">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <div class="search-box"><i class="fas fa-search"></i><input type="text" id="stockSearch" placeholder="พิมพ์ค้นหา..."></div>
+                        <div class="search-box"><i class="fas fa-search"></i><input type="text" id="stockSearch" placeholder="ค้นหา..."></div>
                         <small><i class="fas fa-edit"></i> คลิกดินสอแก้ไข</small>
                     </div>
                     <div class="table-wrapper">
@@ -389,36 +382,48 @@
             </div>
         `; },
         mount() { this.renderTable(); document.getElementById("stockSearch")?.addEventListener("input", e => this.renderTable(e.target.value)); },
+        
         renderTable(filter = "") {
             let data = AppStore.products.filter(p => p.itemcode.includes(filter) || p.description.toLowerCase().includes(filter.toLowerCase()));
             let tbody = document.getElementById("stockTbody");
             if(!tbody) return;
-            if(data.length === 0) { tbody.innerHTML = "<tr><td colspan='9' class='text-center py-4'>ไม่พบสินค้า</td</tr>"; return; }
+            if(data.length === 0) { tbody.innerHTML = "<tr><td colspan='9' class='text-center py-4'>ไม่พบสินค้า</td></tr>"; return; }
             let html = "";
             data.forEach((p, i) => {
-                let need = p.quantity <= (p.reorderPoint || 10);
+                // ✅ แก้ไข: ต้อง reorderPoint > 0 และ quantity <= reorderPoint จึงจะเตือน
+                let reorderPoint = (p.reorderPoint !== undefined && p.reorderPoint !== null) ? p.reorderPoint : 0;
+                let need = reorderPoint > 0 && p.quantity <= reorderPoint;
+                
                 html += `<tr>
-                    <td class="text-center">${i+1}</td>
+                    <td>${i+1}</td>
                     <td style="font-family:monospace">${p.itemcode}</td>
                     <td>${p.description.substring(0,40)}</td>
-                    <td class="text-center">${p.unit}</td>
+                    <td>${p.unit}</td>
                     <td class="text-end">${p.price.toFixed(2)}</td>
                     <td class="text-center ${need ? 'text-danger fw-bold' : ''}">${p.quantity}</td>
-                    <td class="text-center">${need ? '<span class="badge-low">⚠️ ควรสั่งซื้อ</span>' : '<span class="badge-normal">✅ ปกติ</span>'}</td>
-                    <td class="text-center"><span class="reorder-val" data-code="${p.itemcode}">🔔 ${p.reorderPoint || 10}</span></td>
-                    <td class="text-center"><i class="fas fa-edit edit-stock" data-code="${p.itemcode}"></i></td>
+                    <td>${need ? '<span class="badge-low">⚠️ ควรสั่งซื้อ</span>' : '<span class="badge-normal">✅ ปกติ</span>'}</td>
+                    <td><span class="reorder-val" data-code="${p.itemcode}">🔔 ${reorderPoint}</span></td>
+                    <td><i class="fas fa-edit edit-stock" data-code="${p.itemcode}"></i></td>
                 </tr>`;
             });
             tbody.innerHTML = html;
+            
             document.querySelectorAll(".edit-stock").forEach(btn => btn.addEventListener("click", async () => {
                 let code = btn.dataset.code, prod = AppStore.products.find(p => p.itemcode === code);
                 let newQty = prompt("ปรับจำนวนสต็อก:", prod.quantity);
                 if(newQty && !isNaN(parseInt(newQty))) { prod.quantity = parseInt(newQty); await AppStore.save(); this.renderTable(document.getElementById("stockSearch")?.value); AppStore.updateStats(); }
             }));
+            
             document.querySelectorAll(".reorder-val").forEach(el => el.addEventListener("click", async () => {
                 let code = el.dataset.code, prod = AppStore.products.find(p => p.itemcode === code);
-                let newVal = prompt("ตั้งค่ารีไทม์ (จำนวนขั้นต่ำ):", prod.reorderPoint);
-                if(newVal && !isNaN(parseInt(newVal))) { prod.reorderPoint = parseInt(newVal); await AppStore.save(); this.renderTable(document.getElementById("stockSearch")?.value); AppStore.updateStats(); }
+                let currentVal = (prod.reorderPoint !== undefined && prod.reorderPoint !== null) ? prod.reorderPoint : 0;
+                let newVal = prompt("ตั้งค่ารีไทม์ (จำนวนขั้นต่ำ):", currentVal);
+                if(newVal !== null && !isNaN(parseInt(newVal)) && parseInt(newVal) >= 0) { 
+                    prod.reorderPoint = parseInt(newVal); 
+                    await AppStore.save(); 
+                    this.renderTable(document.getElementById("stockSearch")?.value); 
+                    AppStore.updateStats(); 
+                }
             }));
         }
     };
@@ -430,70 +435,26 @@
             <div class="card-custom">
                 <div class="card-header-custom"><h3><i class="fas fa-hand-holding-heart"></i> เบิก/แจกพนักงาน</h3></div>
                 <div class="card-body-custom">
-                    <div style="background:#f8fafc; border-radius: 20px; padding: 20px; margin-bottom: 20px;">
-                        <div class="form-row">
-                            <div class="form-group" style="flex:2; position:relative;">
-                                <label>🔍 เลือกสินค้า (พิมพ์ค้นหา)</label>
+                    <div style="background:#f8fafc; border-radius: 20px; padding: 15px; margin-bottom: 20px;">
+                        <div class="row g-3">
+                            <div class="col-12 position-relative">
+                                <label>🔍 เลือกสินค้า</label>
                                 <input type="text" id="movementProductInput" class="form-control-custom" placeholder="พิมพ์ค้นหา..." autocomplete="off">
                                 <div id="movementDropdownList" class="dropdown-list"></div>
                             </div>
-                            <div class="form-group">
-                                <label>จำนวน</label>
-                                <input type="number" id="movementQty" class="form-control-custom" min="1" value="1">
-                            </div>
-                            <div class="form-group">
-                                <label>ประเภท</label>
-                                <select id="movementType" class="form-control-custom">
-                                    <option value="anniversary">🎉 ชุดครบปี</option>
-                                    <option value="probation">📋 ชุดผ่านทดลองงาน</option>
-                                    <option value="general">👥 เบิกจ่ายพนักงานทั่วไป</option>
-                                    <option value="newhire">🆕 พนักงานใหม่</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>วันที่</label>
-                                <input type="date" id="movementDate" class="form-control-custom">
-                            </div>
+                            <div class="col-6 col-md-3"><label>จำนวน</label><input type="number" id="movementQty" class="form-control-custom" min="1" value="1"></div>
+                            <div class="col-6 col-md-3"><label>ประเภท</label><select id="movementType" class="form-control-custom"><option value="anniversary">🎉 ชุดครบปี</option><option value="probation">📋 ชุดผ่านทดลองงาน</option><option value="general">👥 เบิกจ่ายทั่วไป</option><option value="newhire">🆕 พนักงานใหม่</option></select></div>
+                            <div class="col-6 col-md-3"><label>วันที่</label><input type="date" id="movementDate" class="form-control-custom"></div>
+                            <div class="col-6 col-md-3"><label>ผู้จ่าย</label><input type="text" id="movementIssuer" class="form-control-custom" placeholder="ผู้จ่าย"></div>
+                            <div class="col-12 col-md-4 position-relative"><label>🔍 แผนก</label><input type="text" id="movementDeptInput" class="form-control-custom" placeholder="พิมพ์ค้นหา..."><div id="movementDeptDropdownList" class="dropdown-list"></div></div>
+                            <div class="col-12 col-md-4"><label>ส่วนงาน</label><input type="text" id="movementNote" class="form-control-custom" placeholder="ส่วนงาน"></div>
+                            <div class="col-12 col-md-4"><button id="recordMovementBtn" class="btn-primary-custom"><i class="fas fa-save"></i> บันทึก</button></div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>ผู้จ่าย</label>
-                                <input type="text" id="movementIssuer" class="form-control-custom" placeholder="ผู้จ่าย">
-                            </div>
-                            <div class="form-group" style="position:relative;">
-                                <label>🔍 แผนก (พิมพ์ค้นหา)</label>
-                                <input type="text" id="movementDeptInput" class="form-control-custom" placeholder="พิมพ์ค้นหา...">
-                                <div id="movementDeptDropdownList" class="dropdown-list"></div>
-                            </div>
-                            <div class="form-group">
-                                <label>ส่วนงานที่เบิก</label>
-                                <input type="text" id="movementNote" class="form-control-custom" placeholder="ส่วนงาน">
-                            </div>
-                            <div class="form-group" style="flex:0.5;">
-                                <label>&nbsp;</label>
-                                <button id="recordMovementBtn" class="btn-primary-custom"><i class="fas fa-save"></i> บันทึก</button>
-                            </div>
-                        </div>
-                        <div id="selectedProductDisplay" class="selected-display">✅ เลือก: <span id="selectedProductName"></span></div>
-                        <div id="selectedDeptDisplay" class="selected-display">🏢 แผนก: <span id="selectedDeptName"></span></div>
+                        <div id="selectedProductDisplay" class="selected-display">✅ <span id="selectedProductName"></span></div>
+                        <div id="selectedDeptDisplay" class="selected-display">🏢 <span id="selectedDeptName"></span></div>
                     </div>
-                    
-                    <div class="filter-bar">
-                        <i class="fas fa-filter"></i> <span>กรองประวัติ:</span>
-                        <input type="text" id="historySearch" placeholder="ค้นหา...">
-                        <select id="historyTypeFilter"><option value="">ทุกประเภท</option><option value="anniversary">🎉 ชุดครบปี</option><option value="probation">📋 ชุดผ่านทดลองงาน</option><option value="general">👥 เบิกจ่ายทั่วไป</option><option value="newhire">🆕 พนักงานใหม่</option></select>
-                        <input type="text" id="historyDeptInput" placeholder="แผนก...">
-                        <input type="date" id="historyDateFrom" placeholder="จาก">
-                        <input type="date" id="historyDateTo" placeholder="ถึง">
-                        <button id="resetHistoryBtn" class="btn-success-custom">รีเซ็ต</button>
-                    </div>
-                    
-                    <div class="table-wrapper">
-                        <table class="table-custom">
-                            <thead><tr><th>วันที่</th><th>ประเภท</th><th>Itemcode</th><th>สินค้า</th><th>จำนวน</th><th>มูลค่า</th><th>ผู้จ่าย</th><th>แผนก</th></tr></thead>
-                            <tbody id="historyTbody"></tbody>
-                        </table>
-                    </div>
+                    <div class="filter-bar"><input type="text" id="historySearch" placeholder="ค้นหา..."><select id="historyTypeFilter"><option value="">ทุกประเภท</option><option value="anniversary">🎉 ชุดครบปี</option><option value="probation">📋 ชุดผ่านทดลองงาน</option><option value="general">👥 เบิกจ่ายทั่วไป</option><option value="newhire">🆕 พนักงานใหม่</option></select><input type="text" id="historyDeptInput" placeholder="แผนก..."><input type="date" id="historyDateFrom"><input type="date" id="historyDateTo"><button id="resetHistoryBtn" class="btn-success-custom">รีเซ็ต</button></div>
+                    <div class="table-wrapper"><table class="table-custom"><thead><tr><th>วันที่</th><th>ประเภท</th><th>Itemcode</th><th>สินค้า</th><th>จำนวน</th><th>มูลค่า</th><th>ผู้จ่าย</th><th>แผนก</th></tr></thead><tbody id="historyTbody"></tbody></table></div>
                 </div>
             </div>
         `; },
@@ -533,12 +494,12 @@
             if(!dd) return;
             if(search.trim() === "") { dd.style.display = "none"; return; }
             let filtered = AppStore.products.filter(p => p.itemcode.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase()));
-            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบสินค้า</div>'; dd.style.display = "block"; return; }
-            dd.innerHTML = filtered.slice(0,15).map(p => `<div class="dropdown-item" data-code="${p.itemcode}" data-name="${p.description}" data-price="${p.price}" data-stock="${p.quantity}"><div><strong>${p.itemcode}</strong><br><small>${p.description.substring(0,35)}</small></div><div><strong>${p.quantity}</strong> ชิ้น</div></div>`).join("");
+            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบ</div>'; dd.style.display = "block"; return; }
+            dd.innerHTML = filtered.slice(0,15).map(p => `<div class="dropdown-item" data-code="${p.itemcode}" data-name="${p.description}" data-price="${p.price}" data-stock="${p.quantity}"><div><strong>${p.itemcode}</strong><br><small>${p.description.substring(0,35)}</small></div><div><strong>${p.quantity}</strong></div></div>`).join("");
             dd.style.display = "block";
             dd.querySelectorAll(".dropdown-item").forEach(item => item.addEventListener("click", () => {
                 movementSelectedProduct = { itemcode: item.dataset.code, description: item.dataset.name, price: parseFloat(item.dataset.price), quantity: parseInt(item.dataset.stock) };
-                document.getElementById("movementProductInput").value = `${item.dataset.code} - ${item.dataset.name.substring(0,40)} (เหลือ ${item.dataset.stock})`;
+                document.getElementById("movementProductInput").value = `${item.dataset.code} - ${item.dataset.name.substring(0,40)}`;
                 document.getElementById("selectedProductDisplay").style.display = "block";
                 document.getElementById("selectedProductName").innerHTML = `${item.dataset.code} - ${item.dataset.name}`;
                 dd.style.display = "none";
@@ -549,7 +510,7 @@
             if(!dd) return;
             if(search.trim() === "") { dd.style.display = "none"; return; }
             let filtered = departments.filter(d => d.toLowerCase().includes(search.toLowerCase()));
-            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบแผนก</div>'; dd.style.display = "block"; return; }
+            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบ</div>'; dd.style.display = "block"; return; }
             dd.innerHTML = filtered.map(d => `<div class="dropdown-item" data-dept="${d}">🏢 ${d}</div>`).join("");
             dd.style.display = "block";
             dd.querySelectorAll(".dropdown-item").forEach(item => item.addEventListener("click", () => {
@@ -604,8 +565,8 @@
             filtered.sort((a,b)=>b.date.localeCompare(a.date));
             let tbody = document.getElementById("historyTbody");
             if(!tbody) return;
-            if(filtered.length === 0) { tbody.innerHTML = "<tr><td colspan='8' class='text-center py-4'>ไม่มีประวัติ</td</tr>"; return; }
-            tbody.innerHTML = filtered.map(m => `<tr><td class="text-center">${Helpers.formatDateThai(m.date)}</td><td class="text-center">${m.typeLabel}</td><td>${m.itemcode}</td><td>${m.description.substring(0,30)}</td><td class="text-center">${m.quantity}</td><td class="text-end">${(m.totalValue||0).toFixed(2)}</td><td>${m.issuer}</td><td>${m.department}</td></tr>`).join("");
+            if(filtered.length === 0) { tbody.innerHTML = "<tr><td colspan='8' class='text-center py-4'>ไม่มีประวัติ</td></tr>"; return; }
+            tbody.innerHTML = filtered.map(m => `<tr><td class="text-center">${Helpers.formatDateThai(m.date)}</td><td>${m.typeLabel}</td><td>${m.itemcode}</td><td>${m.description.substring(0,30)}</td><td class="text-center">${m.quantity}</td><td class="text-end">${(m.totalValue||0).toFixed(2)}</td><td>${m.issuer}</td><td>${m.department}</td></tr>`).join("");
         }
     };
     
@@ -616,36 +577,22 @@
             <div class="card-custom">
                 <div class="card-header-custom"><h3><i class="fas fa-undo-alt"></i> คืนสินค้า</h3></div>
                 <div class="card-body-custom">
-                    <div style="background:#f8fafc; border-radius: 20px; padding: 20px; margin-bottom: 20px;">
-                        <div class="form-row">
-                            <div class="form-group" style="flex:2; position:relative;">
-                                <label>🔍 เลือกสินค้าที่จะคืน (พิมพ์ค้นหา)</label>
-                                <input type="text" id="returnProductInput" class="form-control-custom" placeholder="พิมพ์ค้นหา...">
-                                <div id="returnDropdownList" class="dropdown-list"></div>
-                            </div>
-                            <div class="form-group"><label>จำนวน</label><input type="number" id="returnQty" class="form-control-custom" min="1" value="1"></div>
-                            <div class="form-group"><label>วันที่</label><input type="date" id="returnDate" class="form-control-custom"></div>
+                    <div style="background:#f8fafc; border-radius: 20px; padding: 15px; margin-bottom: 20px;">
+                        <div class="row g-3">
+                            <div class="col-12 position-relative"><label>🔍 เลือกสินค้าที่จะคืน</label><input type="text" id="returnProductInput" class="form-control-custom" placeholder="พิมพ์ค้นหา..."><div id="returnDropdownList" class="dropdown-list"></div></div>
+                            <div class="col-6 col-md-3"><label>จำนวน</label><input type="number" id="returnQty" class="form-control-custom" min="1" value="1"></div>
+                            <div class="col-6 col-md-3"><label>วันที่</label><input type="date" id="returnDate" class="form-control-custom"></div>
+                            <div class="col-6 col-md-3"><label>ผู้รับคืน</label><input type="text" id="returnReceiver" class="form-control-custom" placeholder="ผู้รับคืน"></div>
+                            <div class="col-6 col-md-3"><label>ผู้คืน</label><input type="text" id="returnReturner" class="form-control-custom" placeholder="ผู้คืน"></div>
+                            <div class="col-12 col-md-4 position-relative"><label>🔍 แผนก</label><input type="text" id="returnDeptInput" class="form-control-custom" placeholder="พิมพ์ค้นหา..."><div id="returnDeptDropdownList" class="dropdown-list"></div></div>
+                            <div class="col-12 col-md-4"><label>หมายเหตุ</label><input type="text" id="returnNote" class="form-control-custom" placeholder="เหตุผล"></div>
+                            <div class="col-12 col-md-4"><button id="recordReturnBtn" class="btn-primary-custom"><i class="fas fa-save"></i> บันทึก</button></div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>ผู้รับคืน</label><input type="text" id="returnReceiver" class="form-control-custom" placeholder="ผู้รับคืน"></div>
-                            <div class="form-group"><label>ผู้คืน</label><input type="text" id="returnReturner" class="form-control-custom" placeholder="ผู้คืน"></div>
-                            <div class="form-group" style="position:relative;"><label>🔍 แผนก (พิมพ์ค้นหา)</label><input type="text" id="returnDeptInput" class="form-control-custom" placeholder="พิมพ์ค้นหา..."><div id="returnDeptDropdownList" class="dropdown-list"></div></div>
-                            <div class="form-group" style="flex:0.5;"><label>&nbsp;</label><button id="recordReturnBtn" class="btn-primary-custom"><i class="fas fa-save"></i> บันทึก</button></div>
-                        </div>
-                        <div class="form-row"><div class="form-group"><label>หมายเหตุ</label><input type="text" id="returnNote" class="form-control-custom" placeholder="เหตุผล"></div></div>
-                        <div id="selectedReturnProductDisplay" class="selected-display">✅ เลือก: <span id="selectedReturnProductName"></span></div>
-                        <div id="selectedReturnDeptDisplay" class="selected-display">🏢 แผนก: <span id="selectedReturnDeptName"></span></div>
+                        <div id="selectedReturnProductDisplay" class="selected-display">✅ <span id="selectedReturnProductName"></span></div>
+                        <div id="selectedReturnDeptDisplay" class="selected-display">🏢 <span id="selectedReturnDeptName"></span></div>
                     </div>
-                    
-                    <div class="filter-bar">
-                        <i class="fas fa-filter"></i> <span>กรองประวัติ:</span>
-                        <input type="text" id="returnHistorySearch" placeholder="ค้นหา...">
-                        <button id="resetReturnHistoryBtn" class="btn-success-custom">รีเซ็ต</button>
-                    </div>
-                    
-                    <div class="table-wrapper">
-                        <table class="table-custom"><thead><tr><th>วันที่</th><th>Itemcode</th><th>สินค้า</th><th>จำนวน</th><th>ผู้รับคืน</th><th>ผู้คืน</th><th>แผนก</th></tr></thead><tbody id="returnHistoryTbody"></tbody></table>
-                    </div>
+                    <div class="filter-bar"><input type="text" id="returnHistorySearch" placeholder="ค้นหา..."><button id="resetReturnHistoryBtn" class="btn-success-custom">รีเซ็ต</button></div>
+                    <div class="table-wrapper"><table class="table-custom"><thead><tr><th>วันที่</th><th>Itemcode</th><th>สินค้า</th><th>จำนวน</th><th>ผู้รับคืน</th><th>ผู้คืน</th><th>แผนก</th></tr></thead><tbody id="returnHistoryTbody"></tbody></table></div>
                 </div>
             </div>
         `; },
@@ -674,8 +621,8 @@
             if(!dd) return;
             if(search.trim() === "") { dd.style.display = "none"; return; }
             let filtered = AppStore.products.filter(p => p.itemcode.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase()));
-            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบสินค้า</div>'; dd.style.display = "block"; return; }
-            dd.innerHTML = filtered.slice(0,15).map(p => `<div class="dropdown-item" data-code="${p.itemcode}" data-name="${p.description}" data-price="${p.price}" data-stock="${p.quantity}"><div><strong>${p.itemcode}</strong><br><small>${p.description.substring(0,35)}</small></div><div><strong>${p.quantity}</strong> ชิ้น</div></div>`).join("");
+            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบ</div>'; dd.style.display = "block"; return; }
+            dd.innerHTML = filtered.slice(0,15).map(p => `<div class="dropdown-item" data-code="${p.itemcode}" data-name="${p.description}" data-price="${p.price}" data-stock="${p.quantity}"><div><strong>${p.itemcode}</strong><br><small>${p.description.substring(0,35)}</small></div><div><strong>${p.quantity}</strong></div></div>`).join("");
             dd.style.display = "block";
             dd.querySelectorAll(".dropdown-item").forEach(item => item.addEventListener("click", () => {
                 returnSelectedProduct = { itemcode: item.dataset.code, description: item.dataset.name, price: parseFloat(item.dataset.price), quantity: parseInt(item.dataset.stock) };
@@ -690,7 +637,7 @@
             if(!dd) return;
             if(search.trim() === "") { dd.style.display = "none"; return; }
             let filtered = departments.filter(d => d.toLowerCase().includes(search.toLowerCase()));
-            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบแผนก</div>'; dd.style.display = "block"; return; }
+            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบ</div>'; dd.style.display = "block"; return; }
             dd.innerHTML = filtered.map(d => `<div class="dropdown-item" data-dept="${d}">🏢 ${d}</div>`).join("");
             dd.style.display = "block";
             dd.querySelectorAll(".dropdown-item").forEach(item => item.addEventListener("click", () => {
@@ -740,7 +687,7 @@
             filtered.sort((a,b)=>b.date.localeCompare(a.date));
             let tbody = document.getElementById("returnHistoryTbody");
             if(!tbody) return;
-            if(filtered.length === 0) { tbody.innerHTML = "<tr><td colspan='7' class='text-center py-4'>ไม่มีประวัติ</td</tr>"; return; }
+            if(filtered.length === 0) { tbody.innerHTML = "<tr><td colspan='7' class='text-center py-4'>ไม่มีประวัติ</td></tr>"; return; }
             tbody.innerHTML = filtered.map(r => `<tr><td class="text-center">${Helpers.formatDateThai(r.date)}</td><td>${r.oldItemcode}</td><td>${r.oldDescription.substring(0,30)}</td><td class="text-center">${r.oldQty}</td><td>${r.receiver}</td><td>${r.returner}</td><td>${r.department}</td></tr>`).join("");
         }
     };
@@ -752,35 +699,19 @@
             <div class="card-custom">
                 <div class="card-header-custom"><h3><i class="fas fa-truck-ramp-box"></i> รับสินค้าเข้า</h3></div>
                 <div class="card-body-custom">
-                    <div style="background:#e0f2fe; border-radius: 20px; padding: 20px; margin-bottom: 20px;">
-                        <div class="form-row">
-                            <div class="form-group" style="flex:2; position:relative;">
-                                <label>🔍 เลือกสินค้า (พิมพ์ค้นหา)</label>
-                                <input type="text" id="receiveProductInput" class="form-control-custom" placeholder="พิมพ์ค้นหา...">
-                                <div id="receiveDropdownList" class="dropdown-list"></div>
-                            </div>
-                            <div class="form-group"><label>จำนวนที่รับเข้า</label><input type="number" id="receiveQty" class="form-control-custom" min="1" value="1"></div>
-                            <div class="form-group"><label>วันที่รับ</label><input type="date" id="receiveDate" class="form-control-custom"></div>
+                    <div style="background:#e0f2fe; border-radius: 20px; padding: 15px; margin-bottom: 20px;">
+                        <div class="row g-3">
+                            <div class="col-12 position-relative"><label>🔍 เลือกสินค้า</label><input type="text" id="receiveProductInput" class="form-control-custom" placeholder="พิมพ์ค้นหา..."><div id="receiveDropdownList" class="dropdown-list"></div></div>
+                            <div class="col-6 col-md-3"><label>จำนวน</label><input type="number" id="receiveQty" class="form-control-custom" min="1" value="1"></div>
+                            <div class="col-6 col-md-3"><label>วันที่รับ</label><input type="date" id="receiveDate" class="form-control-custom"></div>
+                            <div class="col-12 col-md-4"><label>ผู้รับสินค้า</label><input type="text" id="receiveReceiver" class="form-control-custom" placeholder="ชื่อผู้รับ"></div>
+                            <div class="col-12 col-md-4"><label>หมายเหตุ</label><input type="text" id="receiveNote" class="form-control-custom" placeholder="หมายเหตุ"></div>
+                            <div class="col-12 col-md-4"><button id="recordReceiveBtn" class="btn-primary-custom"><i class="fas fa-save"></i> บันทึก</button></div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>ผู้รับสินค้า</label><input type="text" id="receiveReceiver" class="form-control-custom" placeholder="ชื่อผู้รับ"></div>
-                            <div class="form-group"><label>หมายเหตุ</label><input type="text" id="receiveNote" class="form-control-custom" placeholder="หมายเหตุ"></div>
-                            <div class="form-group" style="flex:0.5;"><label>&nbsp;</label><button id="recordReceiveBtn" class="btn-primary-custom"><i class="fas fa-save"></i> บันทึก</button></div>
-                        </div>
-                        <div id="selectedReceiveProductDisplay" class="selected-display">✅ เลือก: <span id="selectedReceiveProductName"></span></div>
+                        <div id="selectedReceiveProductDisplay" class="selected-display">✅ <span id="selectedReceiveProductName"></span></div>
                     </div>
-                    
-                    <div class="filter-bar">
-                        <i class="fas fa-filter"></i> <span>กรองประวัติ:</span>
-                        <input type="text" id="receiveHistorySearch" placeholder="ค้นหา...">
-                        <input type="date" id="receiveHistoryDateFrom" placeholder="จาก">
-                        <input type="date" id="receiveHistoryDateTo" placeholder="ถึง">
-                        <button id="resetReceiveHistoryBtn" class="btn-success-custom">รีเซ็ต</button>
-                    </div>
-                    
-                    <div class="table-wrapper">
-                        <table class="table-custom"><thead><tr><th>วันที่</th><th>Itemcode</th><th>สินค้า</th><th>จำนวน</th><th>มูลค่า</th><th>ผู้รับ</th><th>หมายเหตุ</th></tr></thead><tbody id="receiveHistoryTbody"></tbody></table>
-                    </div>
+                    <div class="filter-bar"><input type="text" id="receiveHistorySearch" placeholder="ค้นหา..."><input type="date" id="receiveHistoryDateFrom"><input type="date" id="receiveHistoryDateTo"><button id="resetReceiveHistoryBtn" class="btn-success-custom">รีเซ็ต</button></div>
+                    <div class="table-wrapper"><table class="table-custom"><thead><tr><th>วันที่</th><th>Itemcode</th><th>สินค้า</th><th>จำนวน</th><th>มูลค่า</th><th>ผู้รับ</th><th>หมายเหตุ</th></tr></thead><tbody id="receiveHistoryTbody"></tbody></table></div>
                 </div>
             </div>
         `; },
@@ -812,7 +743,7 @@
             if(!dd) return;
             if(search.trim() === "") { dd.style.display = "none"; return; }
             let filtered = AppStore.products.filter(p => p.itemcode.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase()));
-            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบสินค้า</div>'; dd.style.display = "block"; return; }
+            if(filtered.length === 0) { dd.innerHTML = '<div class="dropdown-item">ไม่พบ</div>'; dd.style.display = "block"; return; }
             dd.innerHTML = filtered.slice(0,15).map(p => `<div class="dropdown-item" data-code="${p.itemcode}" data-name="${p.description}" data-price="${p.price}"><div><strong>${p.itemcode}</strong><br><small>${p.description.substring(0,35)}</small></div></div>`).join("");
             dd.style.display = "block";
             dd.querySelectorAll(".dropdown-item").forEach(item => item.addEventListener("click", () => {
@@ -859,7 +790,7 @@
             filtered.sort((a,b)=>b.date.localeCompare(a.date));
             let tbody = document.getElementById("receiveHistoryTbody");
             if(!tbody) return;
-            if(filtered.length === 0) { tbody.innerHTML = "<tr><td colspan='7' class='text-center py-4'>ไม่มีประวัติ</td<tr>"; return; }
+            if(filtered.length === 0) { tbody.innerHTML = "<tr><td colspan='7' class='text-center py-4'>ไม่มีประวัติ</td></tr>"; return; }
             tbody.innerHTML = filtered.map(r => `<tr><td class="text-center">${Helpers.formatDateThai(r.date)}</td><td>${r.itemcode}</td><td>${r.description.substring(0,30)}</td><td class="text-center">${r.quantity}</td><td class="text-end">${(r.totalValue||0).toFixed(2)}</td><td>${r.receiver}</td><td>${r.note}</td></tr>`).join("");
         }
     };
